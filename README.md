@@ -1,0 +1,1 @@
+HMPDM is a diffusion-based video prediction model for autonomous driving that enhances temporal coherence and visual quality by leveraging historical motion priors. It introduces TaLC, MaPE, and Self-Conditioning, and achieves a 28.2% FVD improvement on Cityscapes under the same monocular RGB setting.
