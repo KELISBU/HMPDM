@@ -31,7 +31,7 @@ HMPDM introduces three core designs:
 
 ---
 
-## 📊 Results (from the paper)
+## 📊 Results 
 
 
 
