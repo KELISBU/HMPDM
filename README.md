@@ -9,7 +9,7 @@
 
 [![preprint](https://img.shields.io/badge/Paper-PDF-blue)](https://arxiv.org/abs/2603.27371)
 [![License](https://img.shields.io/badge/License-MIT-green)](#license)
-
+**🎉 Accepted by [IEEE IVS 2026] 🎉**
 </div>
 
 <div align="center">
@@ -19,7 +19,6 @@
 
 **HMPDM** is a diffusion-based **driving video prediction** framework that forecasts how real-world driving scenes evolve in future frames. It leverages **historical motion priors** to improve **temporal consistency** and **visual quality**, supporting safer planning and reasoning for autonomous driving.
 
-**🎉 Accepted by [IEEE IVS 2026] 🎉**
 ---
 
 
