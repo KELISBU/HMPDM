@@ -178,5 +178,4 @@ For both training and evaluation, results are written under the directory you sp
 - The learning rate, warmup, and EMA decay are tuned for the default Cityscapes / KITTI-style settings; if you train on a markedly different dataset, expect to retune.
 
 
-### Installation
 
