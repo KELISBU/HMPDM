@@ -2,13 +2,14 @@
 
 # HMPDM: Historical Motion Priors-Informed Diffusion Model for Driving Video Prediction
 
-**Ke Li(https://kelisbu.github.io/)<sup>1</sup>, Tianjia Yang<sup>2</sup>, Kaidi Liang(https://liangkd.github.io/)<sup>1</sup>, Xianbiao Hu(https://sites.psu.edu/xbhu/xb-hu/)<sup>2</sup>, Ruwen Qin(https://sites.google.com/stonybrook.edu/rqin/home)*<sup>1</sup>**
+**[Ke Li](https://kelisbu.github.io/)<sup>1</sup>, Tianjia Yang<sup>2</sup>, [Kaidi Liang](https://liangkd.github.io/)<sup>1</sup>, [Xianbiao Hu](https://sites.psu.edu/xbhu/xb-hu/)<sup>2</sup>, [Ruwen Qin](https://sites.google.com/stonybrook.edu/rqin/home)<sup>1</sup>\***
 
-<sup>1</sup> Department of Civil Engineering, Stony Brook University
+<sup>1</sup> Department of Civil Engineering, Stony Brook University  
 <sup>2</sup> Department of Civil Engineering, The Pennsylvania State University
 
 [![preprint](https://img.shields.io/badge/Paper-PDF-blue)](https://arxiv.org/abs/2603.27371)
 [![License](https://img.shields.io/badge/License-MIT-green)](#license)
+
 </div>
 
 
