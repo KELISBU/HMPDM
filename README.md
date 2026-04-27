@@ -1,6 +1,6 @@
 # HMPDM: Historical Motion Priors-Informed Diffusion Model for Driving Video Prediction
 
-[![preprint](https://img.shields.io/badge/Paper-PDF-blue)](https://arxiv.org/abs/2603.27371)
+[![preprint](https://img.shields.io/badge/preprint-PDF-blue)](https://arxiv.org/abs/2603.27371)
 [![License](https://img.shields.io/badge/License-MIT-green)](#license)
 
 
