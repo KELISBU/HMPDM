@@ -17,9 +17,6 @@
 </div>
 
 
-**HMPDM** is a diffusion-based **driving video prediction** framework that forecasts how real-world driving scenes evolve in future frames. It leverages **historical motion priors** to improve **temporal consistency** and **visual quality**, supporting safer planning and reasoning for autonomous driving.
-
----
 
 
 ## 📊 Results 
