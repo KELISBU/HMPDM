@@ -1,7 +1,15 @@
+<div align="center">
+
 # HMPDM: Historical Motion Priors-Informed Diffusion Model for Driving Video Prediction
 
-[![preprint](https://img.shields.io/badge/preprint-PDF-blue)](https://arxiv.org/abs/2603.27371)
+**Ke Li<sup>1</sup>, Chenyu Zhang<sup>1</sup>, Ruwen Qin<sup>1</sup>**
+
+<sup>1</sup> Department of Civil Engineering, Stony Brook University
+
+[![preprint](https://img.shields.io/badge/Paper-PDF-blue)](https://arxiv.org/abs/2603.27371)
 [![License](https://img.shields.io/badge/License-MIT-green)](#license)
+</div>
+
 
 
 **HMPDM** is a diffusion-based **driving video prediction** framework that forecasts how real-world driving scenes evolve in future frames. It leverages **historical motion priors** to improve **temporal consistency** and **visual quality**, supporting safer planning and reasoning for autonomous driving.
