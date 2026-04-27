@@ -22,13 +22,6 @@
 
 
 
-## 🚀 Quick Start
-- **TaLC** (Temporal-aware Latent Conditioning) — concatenates clean latents of the past with noisy latents of the future, and uses two parallel time embeddings (one for clean history, one for noisy future) gated by a binary mask, so the UNet's spatio-temporal attention can attend to history without confusing the noise schedule.
-- **MaPE** (Motion-aware Pyramid Encoder) — a hierarchical spatio-temporal transformer that turns the past-frame latents into three multi-scale token sequences `(M1, M2, M3)`. Each is injected as cross-attention memory at the matching depth in the UNet (down1 ↔ M1, down2 ↔ M2, mid / down3 ↔ M3, mirrored in the up path).
-- **SC** (Self-Conditioning) — at training time, with probability `p_sc`, the model first runs a no-grad forward pass with the GT condition, then a second forward pass conditioned on its own detached prediction; only the second pass receives gradients. This lets the model "review" its previous estimate during the iterative denoising at test time.
-
-Under the strictly RGB-only setting, HMPDM achieves 28.2% lower FVD than the previous best on the Cityscapes full test set (2 → 28 frames) and is competitive against multimodal methods that use depth or optical flow.
-
 ## Repository layout
 
 ```
