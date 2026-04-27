@@ -19,8 +19,6 @@
 
 
 
-## 📊 Results 
-
 
 
 ## 🚀 Quick Start
