@@ -23,70 +23,79 @@
 
 
 ## 🚀 Quick Start
-# HMPDM
+- **TaLC** (Temporal-aware Latent Conditioning) — concatenates clean latents of the past with noisy latents of the future, and uses two parallel time embeddings (one for clean history, one for noisy future) gated by a binary mask, so the UNet's spatio-temporal attention can attend to history without confusing the noise schedule.
+- **MaPE** (Motion-aware Pyramid Encoder) — a hierarchical spatio-temporal transformer that turns the past-frame latents into three multi-scale token sequences `(M1, M2, M3)`. Each is injected as cross-attention memory at the matching depth in the UNet (down1 ↔ M1, down2 ↔ M2, mid / down3 ↔ M3, mirrored in the up path).
+- **SC** (Self-Conditioning) — at training time, with probability `p_sc`, the model first runs a no-grad forward pass with the GT condition, then a second forward pass conditioned on its own detached prediction; only the second pass receives gradients. This lets the model "review" its previous estimate during the iterative denoising at test time.
 
-This repository extends [Stable Video Diffusion](https://huggingface.co/stabilityai/stable-video-diffusion-img2vid-xt) (SVD) with a pyramid history encoder and self-conditioning, allowing the model to take several past frames as context and generate a longer future trajectory. The codebase includes the training script, the supporting model modules, and two evaluation scripts: one for qualitative trajectory sampling, and one for full-dataset quantitative evaluation.
+Under the strictly RGB-only setting, HMPDM achieves 28.2% lower FVD than the previous best on the Cityscapes full test set (2 → 28 frames) and is competitive against multimodal methods that use depth or optical flow.
 
 ## Repository layout
 
-| File | Purpose |
-|------|---------|
-| `train_svd_fp16_selfatt.py` | Main training script. Trains a `SVD_UNet_WithHistCtx` (UNet + Pyramid history encoder) with optional self-conditioning and EMA. |
-| `costunet_pyraid.py` | Model definitions: `CustomUNet`, `PyramidEncoder`, `PatchMerging2x2`, `ResidualFlowFusion3D`, `SVD_UNet_WithHistCtx`, plus the Transformer/Attention building blocks. |
-| `evaluationsc.py` | Demo / qualitative evaluation. Generates one or more trajectories from a small subset of clips, reusing the same initial noise across clips for fair comparison. |
-| `evaluationtotal.py` | Full quantitative evaluation. Streams the entire test set and produces one mp4 per clip. |
-| `requirements.txt` | Pinned Python dependencies (PyTorch 2.6 / CUDA 12.4). |
+```
+.
+├── models.py          # TaLCUNet, MaPE, HMPDM, plus PatchMerging2x2 / Attention / TransformerBlock
+├── train.py           # Training script (TaLC + MaPE + SC), checkpoints UNet and MaPE together
+├── evaluate.py        # Full-test-set evaluation, one mp4 per clip, argparse driven
+├── evaluate_demo.py   # Qualitative demo: sample N clips, run K trajectories on the same noise
+├── requirements.txt   # Pinned Python dependencies (PyTorch 2.6 / CUDA 12.4)
+├── scheduler/         # EulerDiscreteScheduler config
+└── README.md
+```
 
 ## 1. Environment setup
 
 The pinned versions in `requirements.txt` target CUDA 12.4. We recommend a fresh conda environment with Python 3.10:
 
 ```bash
-conda create -n svd-xtend python=3.10 -y
-conda activate svd-xtend
+conda create -n hmpdm python=3.10 -y
+conda activate hmpdm
 
 pip install -r requirements.txt
 ```
 
-The first time the scripts run, they will download the base SVD weights from Hugging Face (`stabilityai/stable-video-diffusion-img2vid-xt`). If you do not have internet access from the training node, pre-download the snapshot and pass the local path through `--svdpretrained_model_name_or_path`.
+The first time the scripts run, they will download the base SVD weights from Hugging Face (`stabilityai/stable-video-diffusion-img2vid-xt`). For air-gapped nodes, pre-download the snapshot and pass the local path through `--svdpretrained_model_name_or_path` (training) or `--vae_path` / `--scheduler_dir` (evaluation).
 
-Optional: install `xformers` for memory-efficient attention. If installed, you can enable it with `--enable_xformers_memory_efficient_attention`.
+Optional packages: `xformers` (memory-efficient attention, enable via `--enable_xformers_memory_efficient_attention`), `bitsandbytes` (8-bit Adam, `--use_8bit_adam`), `wandb` (`--report_to wandb`), `tensorboard` (default logger).
 
-## 2. Dataset format
+## 2. Datasets
 
-Both the training script and the evaluation scripts expect the data to be organized as one directory per clip, with sequentially numbered RGB frames inside:
+The paper reports results on:
+
+| Dataset | Train clips | Test clips | Frames per clip | Resolution | Split |
+|---------|-------------|------------|-----------------|------------|-------|
+| Cityscapes | 2,975 | 1,525 | 30 | 128 × 128 | 2 → 28 |
+| KITTI | 759 | 150 | 9 | 128 × 128 | 4 → 5 |
+
+Both training and evaluation expect data laid out as one subdirectory per clip, with sequentially numbered RGB frames inside:
 
 ```
-<base_folder>/
+<data_dir>/
 ├── clip_0001/
 │   ├── 000.png
 │   ├── 001.png
-│   ├── ...
-│   └── 029.png
+│   └── ...
 ├── clip_0002/
-│   ├── ...
-└── ...
+│   └── ...
 ```
 
-Each clip directory must contain at least `F_hist + F_future` frames (e.g. 30 for the default 2 + 28 split used in the evaluation scripts, or 20 for the default 4 + 16 used in training). Frames are sorted by the numeric portion of the filename. Both `.png`, `.jpg`, and `.jpeg` are accepted.
+Each clip directory must contain at least `F_hist + F_future` frames. Frames are sorted by the numeric portion of the filename. `.png`, `.jpg`, and `.jpeg` are accepted.
 
 ## 3. Training
 
-The training script trains the joint UNet + history encoder. The two important hyper-parameters are `--F_hist` (number of history frames used as context) and `--F_future` (number of frames to predict); their sum must equal `--num_frames`.
+The training script jointly trains `TaLCUNet` (a UNet with TaLC) and `MaPE`, with optional EMA and self-conditioning. Following the paper, both are initialized from the SVD pretrained weights and fine-tuned together.
 
-A typical training command on a single multi-GPU node:
+### 3.1 Cityscapes (2 → 28)
 
 ```bash
-accelerate launch train_svd_fp16_selfatt.py \
-    --base_folder /path/to/your/training/clips \
-    --output_dir ./outputs/svd_run1 \
-    --svdpretrained_model_name_or_path stabilityai/stable-video-diffusion-img2vid-xt \
+accelerate launch train.py \
+    --base_folder /path/to/cityscapes/train \
+    --output_dir ./outputs/hmpdm_cityscapes \
     --width 128 --height 128 \
     --F_hist 2 --F_future 28 --num_frames 30 \
-    --per_gpu_batch_size 1 \
-    --gradient_accumulation_steps 1 \
+    --num_samples 2975 \
+    --per_gpu_batch_size 4 \
     --gradient_checkpointing \
-    --learning_rate 1e-4 \
+    --learning_rate 2e-5 \
     --lr_scheduler cosine --lr_warmup_steps 3165 \
     --max_train_steps 100000 \
     --checkpointing_steps 5000 \
@@ -97,72 +106,119 @@ accelerate launch train_svd_fp16_selfatt.py \
     --seed 123
 ```
 
-Notes on the most relevant flags:
+### 3.2 KITTI (4 → 5)
 
-- `--base_folder` is the root directory holding the per-clip subfolders described above.
-- `--num_frames` must equal `--F_hist + --F_future`. The script asserts this internally.
-- `--p_sc` is the probability of applying self-conditioning during a step (the model first runs a no-grad forward with GT condition, then re-runs with the predicted future as condition).
-- `--use_ema` enables a cross-device EMA copy of both the UNet and the history encoder; checkpoints are saved together under `checkpoint-<step>/`.
-- `--mixed_precision fp16` is the tested setting; bf16 also works on Ampere or newer GPUs.
-- `--gradient_checkpointing` is recommended at 128×128 / 30 frames to fit on a single 24 GB GPU.
+```bash
+accelerate launch train.py \
+    --base_folder /path/to/kitti/train \
+    --output_dir ./outputs/hmpdm_kitti \
+    --width 128 --height 128 \
+    --F_hist 4 --F_future 5 --num_frames 9 \
+    --num_samples 759 \
+    --per_gpu_batch_size 4 \
+    --gradient_checkpointing \
+    --learning_rate 2e-5 \
+    --lr_scheduler cosine \
+    --max_train_steps 100000 \
+    --checkpointing_steps 5000 \
+    --mixed_precision fp16 \
+    --p_sc 0.9 \
+    --use_ema
+```
 
-Resume from the latest checkpoint by passing `--resume_from_checkpoint latest`.
+### Key flags
 
-Each saved checkpoint contains:
+| Flag | Description | Paper default |
+|------|-------------|---------------|
+| `--F_hist` | Number of past frames (P) | 2 (Cityscapes), 4 (KITTI) |
+| `--F_future` | Number of future frames (F) | 28 (Cityscapes), 5 (KITTI) |
+| `--num_frames` | Total frames per clip; must equal F_hist + F_future | 30 / 9 |
+| `--p_sc` | Self-conditioning probability (W.A.L.T. recommends 0.9) | 0.9 |
+| `--learning_rate` | LR after warmup | 2e-5 |
+| `--per_gpu_batch_size` | Batch size per device | 4 (paper uses one L40S 48 GB) |
+| `--max_train_steps` | Total optimization steps | 1e5 |
+| `--use_ema` | Cross-device EMA over the trainable parameters | on |
+| `--mixed_precision` | `no` / `fp16` / `bf16` | `fp16` |
+| `--gradient_checkpointing` | Trade compute for memory; recommended on smaller GPUs | on |
+
+Resume from the most recent checkpoint with `--resume_from_checkpoint latest`.
+
+### Checkpoint contents
 
 ```
 checkpoint-XXXXX/
-├── unet/                  # diffusers-style UNet snapshot
-├── ctx_encoder.pt         # PyramidEncoder state_dict
-├── unet_ema.pt            # (if --use_ema) EMA shadow weights
-└── ctx_encoder_ema.pt     # (if --use_ema) EMA shadow for the history encoder
+├── unet/                  # diffusers-style TaLCUNet snapshot (config.json + safetensors)
+├── ctx_encoder.pt         # MaPE state_dict
+├── unet_ema.pt            # (--use_ema) EMA shadow for UNet
+└── ctx_encoder_ema.pt     # (--use_ema) EMA shadow for MaPE
 ```
 
-A `loss.csv` is written to `--output_dir` at the end of training for plotting.
+A `loss.csv` is written under `--output_dir` at the end of training for plotting.
 
 ## 4. Evaluation
 
-Two evaluation scripts are provided. Both read clips from disk in the same per-clip-folder layout, encode the first `F_hist` frames as conditioning, and generate `F_future` future frames using the trained UNet + history encoder. The output of each clip is saved as an mp4.
+Both evaluation scripts are argparse-driven; no hard-coded paths.
 
-Both scripts currently contain **hard-coded paths** at the top of `main()` (checkpoint directory, dataset path, output root). Edit these before running.
+### 4.1 Full-test-set evaluation
 
-### 4.1 Qualitative demo (`evaluationsc.py`)
-
-Use this script when you want to compare several trajectories on the same handful of clips, all starting from the same initial noise. By default it samples a single clip and runs one trajectory; loop over `range(N)` in the trajectory loop to produce N variants.
+Generates one mp4 per clip in the test set:
 
 ```bash
-python evaluationsc.py
+python evaluate.py \
+    --checkpoint ./outputs/hmpdm_cityscapes/checkpoint-100000 \
+    --data_dir /path/to/cityscapes/test \
+    --output_dir ./outputs/hmpdm_cityscapes/eval_full \
+    --device cuda:0 \
+    --width 128 --height 128 \
+    --F_hist 2 --F_future 28 \
+    --num_inference_steps 50 \
+    --num_trajectories 10
 ```
 
-Key constants you typically edit at the top of `main()`:
+`--num_trajectories 10` reproduces the paper's `#T=10` setting (best-of-10 metrics).
 
-- `device = "cuda:2"` — change to your free GPU.
-- `unet = CustomUNet.from_pretrained(...)` and `ctx_path = ...` — point to your trained checkpoint folder.
-- `DummyDataset('/path/to/clips/', ...)` — point to the dataset to sample from.
-- `OUT_ROOT_BASE = ...` — output directory for the generated mp4s.
-- `F_hist`, `F_future`, `sample_frames` — must satisfy `F_hist + F_future == sample_frames`.
+### 4.2 Qualitative demo
 
-### 4.2 Full-dataset evaluation (`evaluationtotal.py`)
-
-Use this script to run inference on every clip in a test set. It streams clips from disk one at a time (no caching) and writes an mp4 per clip:
+Samples a small number of clips and renders multiple trajectories on each (different initial noise, same input):
 
 ```bash
-python evaluationtotal.py
+python evaluate_demo.py \
+    --checkpoint ./outputs/hmpdm_cityscapes/checkpoint-100000 \
+    --data_dir /path/to/cityscapes/test \
+    --output_dir ./outputs/hmpdm_cityscapes/demo \
+    --device cuda:0 \
+    --num_clips 4 \
+    --num_trajectories 5
 ```
 
-The same hard-coded constants at the top of `main()` need to be set: checkpoint path, dataset path (e.g. KITTI test split), and `OUT_ROOT_BASE`. The default configuration uses `F_hist=2, F_future=28` and 50 inference steps with the `EulerDiscreteScheduler`.
+### 4.3 Metrics
 
-The two scripts are intentionally similar; the main difference is that `evaluationsc` takes the **last** `sample_frames` of each clip (useful for picking the most recent context window), while `evaluationtotal` takes the **first** `sample_frames` (useful when ground-truth alignment matters during scoring).
+The paper reports SSIM, PSNR, LPIPS, and FVD on (a) a randomly sampled subset of 256 clips and (b) the full test set, both across `#T=10` denoising trajectories. Computing these from the generated mp4s requires standard external implementations (e.g. `lpips`, `pytorch-fid`, `frechet-video-distance`); they are not bundled in this repo.
 
-## 5. Output format
+## 5. Implementation notes
 
-For both training and evaluation, results are written under the directory you specify. Generated videos are encoded with `cv2.VideoWriter` using the `mp4v` codec; frame size matches `(width, height)` and the framerate is set inside the script (17 fps for `evaluationsc`, also 17 by default for `evaluationtotal`).
+- **MaPE input size constraint.** `MaPE` uses three /2 downsampling stages, so its `input_size` must be `height // 8` and divisible by 8. The training script and evaluation scripts wire this up automatically from `--height`.
+- **Cross-attention dim.** `MaPE.hidden_size` must equal `UNet.cross_attention_dim` (1024 for SVD-XT). Don't change `hidden_size` unless you also adjust the UNet.
+- **Dual time embedding.** `TaLCUNet.time_embedding_cond` is initialized as a deep copy of the pretrained `time_embedding`; both branches are fine-tuned during training, gated by the `cond_mask` derived from history vs. future positions.
+- **Self-conditioning at inference.** During evaluation we always feed the model's previous-step `pred_original_sample` as the condition for the next step (concatenated along the channel dimension), so SC is implicit in the loop, not a flag.
 
-## 6. Tips
+## 6. Citation
 
-- The history encoder's `input_size` must equal `height // 8` and be divisible by 8 (the script uses three `/2` downsampling stages).
-- If you change `--F_hist`, also update the `PyramidEncoder(input_size=..., num_frames=...)` line in the evaluation scripts so the shapes match.
-- The learning rate, warmup, and EMA decay are tuned for the default Cityscapes / KITTI-style settings; if you train on a markedly different dataset, expect to retune.
+If you use this code or build on HMPDM, please cite:
+
+```bibtex
+@inproceedings{li2026hmpdm,
+  title     = {HMPDM: A Diffusion Model for Driving Video Prediction with Historical Motion Priors},
+  author    = {Li, Ke and Yang, Tianjia and Liang, Kaidi and Hu, Xianbiao and Qin, Ruwen},
+  booktitle = {IEEE Intelligent Vehicles Symposium (IV)},
+  year      = {2026}
+}
+```
+
+## Acknowledgements
+
+This codebase builds on [Stable Video Diffusion](https://huggingface.co/stabilityai/stable-video-diffusion-img2vid-xt) and the SVD training scaffold from [SVD_Xtend](https://github.com/pixeli99/SVD_Xtend). The MaPE block design draws on [Latte](https://github.com/Vchitect/Latte) for the alternating spatial–temporal transformer pattern. Self-conditioning follows the W.A.L.T. recipe.
+
 
 
 
