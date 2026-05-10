@@ -42,7 +42,7 @@ The pinned versions in `requirements.txt` target CUDA 12.4. We recommend a fresh
 ```bash
 conda create -n hmpdm python=3.10 -y
 conda activate hmpdm
-
+cd HMPDM
 pip install -r requirements.txt
 ```
 
