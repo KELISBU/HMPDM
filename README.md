@@ -63,11 +63,21 @@ Both training and evaluation expect data laid out as one subdirectory per clip, 
 
 ```
 <data_dir>/
-├── clip_0001/
-│   ├── 000.png
-│   ├── 001.png
+├── train/
+│   ├── video_001/
+│   │   ├── frame_000.png
+│   │   ├── frame_001.png
+│   │   └── ...
+│   ├── video_002/
+│   │   └── ...
 │   └── ...
-├── clip_0002/
+├── val/
+│   ├── video_001/
+│   │   ├── frame_000.png
+│   │   ├── frame_001.png
+│   │   └── ...
+│   ├── video_002/
+│   │   └── ...
 │   └── ...
 ```
 
