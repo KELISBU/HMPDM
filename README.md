@@ -234,7 +234,7 @@ python evaluate_demo.py \
 
 ### 5.4 Metrics
 
-The paper reports SSIM, PSNR, LPIPS, and FVD on (a) a randomly sampled subset of 256 clips and (b) the full test set, both across `#T=10` denoising trajectories. Computing these from the generated mp4s requires standard external implementations — we use the [`lpips`](https://github.com/richzhang/PerceptualSimilarity) package for LPIPS, `scikit-image` for SSIM/PSNR, and an I3D-based FVD implementation (e.g. [pytorch-fvd](https://github.com/universome/fvd-comparison)). These are intentionally not bundled to keep `requirements.txt` minimal.
+The paper reports SSIM, PSNR, LPIPS, and FVD on (a) a randomly sampled subset of 256 clips and (b) the full test set, both across `#T=10` denoising trajectories. Computing these from the generated mp4s requires standard external implementations — we use the [`lpips`](https://github.com/richzhang/PerceptualSimilarity) package for LPIPS, `scikit-image` for SSIM/PSNR, and an I3D-based FVD implementation ([common_metrics_on_video_quality](https://github.com/JunyaoHu/common_metrics_on_video_quality)). These are intentionally not bundled to keep `requirements.txt` minimal.
 
 ## 6. Implementation notes
 
