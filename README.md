@@ -248,15 +248,14 @@ The paper reports SSIM, PSNR, LPIPS, and FVD on (a) a randomly sampled subset of
 If you use this code or build on HMPDM, please cite:
 
 ```bibtex
-@inproceedings{li2026hmpdm,
-  title     = {HMPDM: A Diffusion Model for Driving Video Prediction with Historical Motion Priors},
-  author    = {Li, Ke and Yang, Tianjia and Liang, Kaidi and Hu, Xianbiao and Qin, Ruwen},
-  booktitle = {IEEE Intelligent Vehicles Symposium (IV)},
-  year={2026},
-  eprint={2603.27371},
-  archivePrefix={arXiv},
-  primaryClass={cs.CV},
-  url={https://arxiv.org/abs/2603.27371}, 
+@inproceedings{li2026hmpdmdiffusionmodeldriving,
+      title={HMPDM: A Diffusion Model for Driving Video Prediction with Historical Motion Priors}, 
+      author={Ke Li and Tianjia Yang and Kaidi Liang and Xianbiao Hu and Ruwen Qin},
+      year={2026},
+      eprint={2603.27371},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2603.27371}, 
 }
 ```
 
