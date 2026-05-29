@@ -92,6 +92,20 @@ class VideoFolderDataset(Dataset):
 ########################################
 # Helper functions
 ########################################
+def _resolve_ctx_path(checkpoint: str) -> str:
+    """Return a local path to ctx_encoder.pt.
+
+    If `checkpoint` is a local directory, just join the filename. Otherwise treat
+    it as a HuggingFace Hub repo id (e.g. 'KELISBU/HMPDM-Cityscapes') and download
+    the file via huggingface_hub.
+    """
+    local_path = os.path.join(checkpoint, "ctx_encoder.pt")
+    if os.path.isfile(local_path):
+        return local_path
+    from huggingface_hub import hf_hub_download
+    return hf_hub_download(repo_id=checkpoint, filename="ctx_encoder.pt")
+
+
 def _get_add_time_ids(
     fps,
     motion_bucket_id,
@@ -167,7 +181,7 @@ def main():
     ).to(device)
 
     ctx = MaPE(input_size=args.height // 8, num_frames=args.F_hist, n_pairs=3).to(device)
-    state = torch.load(os.path.join(args.checkpoint, "ctx_encoder.pt"), map_location="cpu")
+    state = torch.load(_resolve_ctx_path(args.checkpoint), map_location="cpu")
     ctx.load_state_dict(state, strict=True)
     ctx = ctx.to(device=device, dtype=torch.float32).eval()
 
