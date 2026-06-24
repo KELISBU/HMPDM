@@ -7,7 +7,7 @@
 <sup>1</sup> Department of Civil Engineering, Stony Brook University
 <sup>2</sup> Department of Civil Engineering, Pennsylvania State University
 
-[![preprint](https://img.shields.io/badge/Paper-PDF-blue)](https://arxiv.org/abs/XXXX.XXXXX)
+[![preprint](https://img.shields.io/badge/Paper-PDF-blue)](https://arxiv.org/abs/2603.27371)
 [![Model](https://img.shields.io/badge/🤗-Model-yellow)](https://huggingface.co/Ke66668888/HMPDM-Cityscapes)
 [![License](https://img.shields.io/badge/License-MIT-green)](#license)
 
